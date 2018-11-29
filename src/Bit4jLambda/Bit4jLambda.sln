@@ -19,6 +19,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TekstVertaler", "TekstVerta
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TekstVertaler.Tests", "TekstVertaler.Tests\TekstVertaler.Tests.csproj", "{F47F38E1-C76F-47AD-8247-C4CC611E7951}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bit4j.Lambda.Core", "Bit4j.Lambda.Core\Bit4j.Lambda.Core.csproj", "{70B7B60E-2175-49ED-AA69-6C0CB833B2C2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{F47F38E1-C76F-47AD-8247-C4CC611E7951}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F47F38E1-C76F-47AD-8247-C4CC611E7951}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F47F38E1-C76F-47AD-8247-C4CC611E7951}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70B7B60E-2175-49ED-AA69-6C0CB833B2C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70B7B60E-2175-49ED-AA69-6C0CB833B2C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70B7B60E-2175-49ED-AA69-6C0CB833B2C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70B7B60E-2175-49ED-AA69-6C0CB833B2C2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
