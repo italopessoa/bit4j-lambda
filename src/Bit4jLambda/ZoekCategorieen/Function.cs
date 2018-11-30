@@ -1,9 +1,10 @@
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-
 using Amazon.Lambda.Core;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Bit4j.Lambda.Core.Factory;
 using Bit4j.Lambda.Core.Model;
 using Newtonsoft.Json;
 
@@ -14,9 +15,8 @@ namespace ZoekCategorieen
 {
     public class Function
     {
-
         private AmazonSQSClient _sqsClient;
-        
+
         /// <summary>
         /// A simple function that takes a string and does a ToUpper
         /// </summary>
@@ -25,6 +25,7 @@ namespace ZoekCategorieen
         /// <returns></returns>
         public async Task<string> FunctionHandler(string input, ILambdaContext context)
         {
+            string categoryQueueURL = Environment.GetEnvironmentVariable("CATEGORY_QUEUE_NAME");
             HttpClient httpClient = new HttpClient();
             var response = await httpClient.GetAsync("https://opentdb.com/api_count_global.php");
             Catalog catalog = JsonConvert.DeserializeObject<Catalog>(await response.Content.ReadAsStringAsync());
@@ -32,15 +33,15 @@ namespace ZoekCategorieen
             int neo4jRegisteredQuestions = 0;
             if (catalog.Overall.VerifiedQuestions > neo4jRegisteredQuestions)
             {
-                _sqsClient = null;//new AmazonSQSClient();
+                _sqsClient = AWSClientFactory.GetAmazonSQSClient();
 
                 response = await httpClient.GetAsync("https://opentdb.com/api_category.php");
                 CategoryList categories = JsonConvert.DeserializeObject<CategoryList>(await response.Content.ReadAsStringAsync());
-                SendMessageRequest sendMessageRequest = null;
-                //new SendMessageRequest
-                //{
-                //    QueueUrl = ""
-                //};
+                SendMessageRequest sendMessageRequest =
+                new SendMessageRequest
+                {
+                    QueueUrl = "https://sqs.us-east-1.amazonaws.com/134621539640/Categorieen_Q"
+                };
 
                 SendMessageResponse sendMessageResponse = null;
 
@@ -61,10 +62,9 @@ namespace ZoekCategorieen
                     response = await httpClient.GetAsync($"https://opentdb.com/api_count.php?category={category.CategoryId}");
                     CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(await response.Content.ReadAsStringAsync());
 
-                    //sendMessageRequest.MessageBody = "";
-                    //sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
+                    sendMessageRequest.MessageBody = JsonConvert.SerializeObject(category);
+                    sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
                 }
-
             }
             return input?.ToUpper();
         }
