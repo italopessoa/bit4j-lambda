@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Neo4j.Map.Extension\src\Neo4j.Map.Extension\Neo4j.Map.Extension.csproj" />
     <ProjectReference Include="..\Bit4j.Lambda.Core\Bit4j.Lambda.Core.csproj" />
   </ItemGroup>
 

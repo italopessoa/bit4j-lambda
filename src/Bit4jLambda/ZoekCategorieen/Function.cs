@@ -1,11 +1,17 @@
-using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Amazon;
 using Amazon.Lambda.Core;
+using Amazon.SimpleSystemsManagement;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Bit4j.Lambda.Core.Extensions;
 using Bit4j.Lambda.Core.Factory;
 using Bit4j.Lambda.Core.Model;
+using Bit4j.Lambda.Core.Model.Nodes;
+using Neo4j.Driver.V1;
+using Neo4j.Map.Extension.Map;
+using Neo4j.Map.Extension.Model;
 using Newtonsoft.Json;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
@@ -23,9 +29,30 @@ namespace ZoekCategorieen
         /// <param name="input"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        public async Task<string> FunctionHandler(string input, ILambdaContext context)
+        public async Task<string> FunctionHandler(ILambdaContext context)
         {
-            string categoryQueueURL = Environment.GetEnvironmentVariable("CATEGORY_QUEUE_NAME");
+            string categoryQueueURL = "";
+            string neo4jUser = "";
+            string neo4jPassword = "";
+            string neo4jServerIp = "";
+#if DEBUG
+            categoryQueueURL = "https://sqs.us-east-1.amazonaws.com/134621539640/Categorieen_Q";
+            neo4jUser = "neo4j";
+            neo4jPassword = "bitcoinshow";
+            neo4jServerIp = "bolt://127.0.0.1:7687";
+#else
+            using (AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient())
+            {
+                categoryQueueURL = await ssmCLient.GetParameterValueAsync("categorieen_queue_url".ConvertToParameterRequest());
+                neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
+                neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
+                neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
+            }
+
+#endif
+
+            IDriver driver = GraphDatabase.Driver(neo4jServerIp, AuthTokens.Basic(neo4jUser, neo4jPassword));
+
             HttpClient httpClient = new HttpClient();
             var response = await httpClient.GetAsync("https://opentdb.com/api_count_global.php");
             Catalog catalog = JsonConvert.DeserializeObject<Catalog>(await response.Content.ReadAsStringAsync());
@@ -40,33 +67,47 @@ namespace ZoekCategorieen
                 SendMessageRequest sendMessageRequest =
                 new SendMessageRequest
                 {
-                    QueueUrl = "https://sqs.us-east-1.amazonaws.com/134621539640/Categorieen_Q"
+                    QueueUrl = categoryQueueURL
                 };
 
                 SendMessageResponse sendMessageResponse = null;
 
-                bool categoryExists = true;
-                for (int i = 0; i < categories.Categories.Count; i++)
+                using (ISession session = driver.Session(AccessMode.Write))
                 {
-                    Category category = categories.Categories[i];
-                    //TODO: check if category exists
-                    if (categoryExists)
+                    for (int i = 0; i < categories.Categories.Count; i++)
                     {
-                        //MATCH to get category uuid
-                    }
-                    else
-                    {
-                        //CREATE get category uuid
-                    }
+                        CategoryNode categoryNode = new CategoryNode(categories.Categories[i]);
+                        CategoryNode actualCategoryNode = null;
+                        string query = categoryNode.MapToCypher(CypherQueryType.Match);
+                        IStatementResultCursor result = await session.RunAsync(query);
 
-                    response = await httpClient.GetAsync($"https://opentdb.com/api_count.php?category={category.CategoryId}");
-                    CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(await response.Content.ReadAsStringAsync());
+                        await result.ForEachAsync(r =>
+                        {
+                            actualCategoryNode = r[r.Keys[0]].Map<CategoryNode>();
+                        });
 
-                    sendMessageRequest.MessageBody = JsonConvert.SerializeObject(category);
-                    sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
+                        if (actualCategoryNode == null)
+                        {
+                            query = categoryNode.MapToCypher(CypherQueryType.Create);
+                            result = await session.RunAsync(query);
+
+                            await result.ForEachAsync(r =>
+                            {
+                                actualCategoryNode = r[r.Keys[0]].Map<CategoryNode>();
+                            });
+                        }
+
+                        response = await httpClient.GetAsync($"https://opentdb.com/api_count.php?category={categoryNode.CategoryId}");
+                        CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(await response.Content.ReadAsStringAsync());
+                        categoryCatalog.UUID = actualCategoryNode.UUID;
+
+                        sendMessageRequest.MessageBody = JsonConvert.SerializeObject(categoryCatalog);
+                        sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
+                    }
                 }
             }
-            return input?.ToUpper();
+            context.Logger.LogLine("CATEGORIES ENQUEUED");
+            return "CATEGORIES ENQUEUED";
         }
     }
 }
