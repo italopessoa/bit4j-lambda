@@ -36,7 +36,7 @@ namespace ZoekCategorieen
             string neo4jPassword = "";
             string neo4jServerIp = "";
 #if DEBUG
-            categoryQueueURL = "https://sqs.us-east-1.amazonaws.com/134621539640/Categorieen_Q";
+            categoryQueueURL = "";
             neo4jUser = "neo4j";
             neo4jPassword = "bitcoinshow";
             neo4jServerIp = "bolt://127.0.0.1:7687";
@@ -48,7 +48,6 @@ namespace ZoekCategorieen
                 neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
                 neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
             }
-
 #endif
 
             IDriver driver = GraphDatabase.Driver(neo4jServerIp, AuthTokens.Basic(neo4jUser, neo4jPassword));
@@ -78,8 +77,8 @@ namespace ZoekCategorieen
                     {
                         CategoryNode categoryNode = new CategoryNode(categories.Categories[i]);
                         CategoryNode actualCategoryNode = null;
-                        string query = categoryNode.MapToCypher(CypherQueryType.Match);
-                        IStatementResultCursor result = await session.RunAsync(query);
+                        string matchQuery = categoryNode.MapToCypher(CypherQueryType.Match);
+                        IStatementResultCursor result = await session.RunAsync(matchQuery);
 
                         await result.ForEachAsync(r =>
                         {
@@ -88,8 +87,9 @@ namespace ZoekCategorieen
 
                         if (actualCategoryNode == null)
                         {
-                            query = categoryNode.MapToCypher(CypherQueryType.Create);
-                            result = await session.RunAsync(query);
+                            string createQuery = categoryNode.MapToCypher(CypherQueryType.Create);
+                            await session.RunAsync(createQuery);
+                            result = await session.RunAsync(matchQuery);
 
                             await result.ForEachAsync(r =>
                             {
