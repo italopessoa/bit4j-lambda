@@ -72,6 +72,10 @@ namespace ZoekVragen
 #endif
 
             CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(message.Body);
+            CategoryNode categoryNode = new CategoryNode
+            {
+                UUID = categoryCatalog.UUID
+            };
 
             HttpClient httpClient = new HttpClient();
 
@@ -102,7 +106,7 @@ namespace ZoekVragen
             }
 
             List<QuestionNode> questionsToCreate = new List<QuestionNode>();
-            using (ISession session = driver.Session(AccessMode.Write))
+            using (ISession session = driver.Session(AccessMode.Read))
             {
                 for (int i = 0; i < questions.Count; i++)
                 {
@@ -125,6 +129,7 @@ namespace ZoekVragen
             List<QuestionNode> questionsToTranslate = new List<QuestionNode>();
             using (ISession session = driver.Session(AccessMode.Write))
             {
+
                 foreach (QuestionNode question in questionsToCreate)
                 {
                     string createQuery = question.MapToCypher(CypherQueryType.Create);
@@ -133,11 +138,25 @@ namespace ZoekVragen
                     IStatementResultCursor result = await session.RunAsync(createQuery);
 
                     result = await session.RunAsync(matchQuery);
-
+                    QuestionNode createdQuestion = null;
                     await result.ForEachAsync(r =>
                        {
-                           questionsToTranslate.Add(r[r.Keys[0]].Map<QuestionNode>());
+                           createdQuestion = r[r.Keys[0]].Map<QuestionNode>();
+                           questionsToTranslate.Add(createdQuestion);
                        });
+
+                    try
+                    {
+
+                        QuestionCategoryRelationNode relationNode = new QuestionCategoryRelationNode(categoryNode, createdQuestion);
+                        string createRelationQuery = relationNode.CreateRelationQuery();
+                        await session.RunAsync(createRelationQuery);
+                    }
+                    catch (System.Exception ex)
+                    {
+
+                        //throw;
+                    }
                 }
             }
 
@@ -155,6 +174,15 @@ namespace ZoekVragen
             }
 
             await Task.CompletedTask;
+        }
+    }
+
+    public class QuestionCategoryRelationNode : RelationNode<CategoryNode, QuestionNode>
+    {
+        public QuestionCategoryRelationNode(CategoryNode origin, QuestionNode destiny)
+            : base(origin, destiny)
+        {
+            RelationType = "CATEGORY";
         }
     }
 }
