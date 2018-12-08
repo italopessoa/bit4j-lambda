@@ -1,10 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 using Amazon.Lambda.Core;
 using Amazon.Lambda.SQSEvents;
+using Amazon.SimpleSystemsManagement;
+using Bit4j.Lambda.Core.Extensions;
+using Bit4j.Lambda.Core.Factory;
+using Google.Apis.Auth.OAuth2;
+using Google.Cloud.Translation.V2;
 
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
@@ -44,6 +46,30 @@ namespace TekstVertaler
         {
             context.Logger.LogLine($"Processed message {message.Body}");
 
+            string vertaaldeVragenQueueURL = "";
+            string neo4jUser = "";
+            string neo4jPassword = "";
+            string neo4jServerIp = "";
+            string gcCredentialsJson = "";
+#if DEBUG
+            vertaaldeVragenQueueURL = "";
+            neo4jUser = "neo4j";
+            neo4jPassword = "bitcoinshow";
+            neo4jServerIp = "bolt://127.0.0.1:7687";
+            gcCredentialsJson = "";
+#else
+            using (AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient())
+            {
+                vertaaldeVragenQueueURL = await ssmCLient.GetParameterValueAsync("vertaalde_vragen_queue_url".ConvertToParameterRequest());
+                neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
+                neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
+                neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
+                gcCredentialsJson = await ssmCLient.GetParameterValueAsync("gc_translate".ConvertToParameterRequest(true));
+            }
+#endif
+            GoogleCredential credential = GoogleCredential.FromJson(gcCredentialsJson);
+            TranslationClient translationClient = TranslationClient.Create(credential);
+            TranslationResult translationResult = translationClient.TranslateText("Quake Engine", "pt", "en");
             // TODO: Do interesting work based on the new message
             await Task.CompletedTask;
         }

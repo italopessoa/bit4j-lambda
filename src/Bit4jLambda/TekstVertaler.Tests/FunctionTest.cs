@@ -14,7 +14,7 @@ namespace TekstVertaler.Tests
     public class FunctionTest
     {
         [Fact]
-        public async Task TestSQSEventLambdaFunction()
+        public async Task TestTranslationLambdaFunction()
         {
             var sqsEvent = new SQSEvent
             {
@@ -22,7 +22,7 @@ namespace TekstVertaler.Tests
                 {
                     new SQSEvent.SQSMessage
                     {
-                        Body = "foobar"
+                        Body = "{\"category\":\"Entertainment: Video Games\",\"type\":\"multiple\",\"difficulty\":\"easy\",\"question\":\"Half - Life by Valve uses the GoldSrc game engine, which is a highly modified version of what engine ?\",\"correct_answer\":\"Quake Engine\",\"Id\":1485,\"UUID\":\"3c9a9ad0-fb0a-11e8-ace1-b05216d697df\"}"
                     }
                 }
             };
