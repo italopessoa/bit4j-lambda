@@ -14,7 +14,7 @@ namespace ZoekVragen.Tests
     public class FunctionTest
     {
         [Fact]
-        public async Task TestSQSEventLambdaFunction()
+        public async Task TestCreateQuestionstLambdaFunction()
         {
             var sqsEvent = new SQSEvent
             {

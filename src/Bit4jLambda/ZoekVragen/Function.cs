@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.SQSEvents;
 using Amazon.SQS;
@@ -64,7 +63,7 @@ namespace ZoekVragen
 #else
             using (AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient())
             {
-                categoryQueueURL = await ssmCLient.GetParameterValueAsync("vragen_queue_url".ConvertToParameterRequest());
+                questionsQueueURL = await ssmCLient.GetParameterValueAsync("vragen_queue_url".ConvertToParameterRequest());
                 neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
                 neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
                 neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
@@ -129,7 +128,6 @@ namespace ZoekVragen
             List<QuestionNode> questionsToTranslate = new List<QuestionNode>();
             using (ISession session = driver.Session(AccessMode.Write))
             {
-
                 foreach (QuestionNode question in questionsToCreate)
                 {
                     string createQuery = question.MapToCypher(CypherQueryType.Create);
@@ -147,14 +145,12 @@ namespace ZoekVragen
 
                     try
                     {
-
                         QuestionCategoryRelationNode relationNode = new QuestionCategoryRelationNode(categoryNode, createdQuestion);
                         string createRelationQuery = relationNode.CreateRelationQuery();
                         await session.RunAsync(createRelationQuery);
                     }
                     catch (System.Exception ex)
                     {
-
                         //throw;
                     }
                 }
