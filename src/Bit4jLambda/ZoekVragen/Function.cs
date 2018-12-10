@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.SQSEvents;
 using Amazon.SQS;
@@ -165,7 +167,16 @@ namespace ZoekVragen
                 };
             foreach (QuestionNode question in questionsToTranslate)
             {
-                sendMessageRequest.MessageBody = JsonConvert.SerializeObject(question);
+                var serializer = new JsonSerializer();
+                var stringWriter = new StringWriter();
+                using (var writer = new JsonTextWriter(stringWriter))
+                {
+                    writer.QuoteName = false;
+                    serializer.Serialize(writer, question);
+                }
+
+                var json = stringWriter.ToString();
+                sendMessageRequest.MessageBody = json;
                 sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
             }
 
