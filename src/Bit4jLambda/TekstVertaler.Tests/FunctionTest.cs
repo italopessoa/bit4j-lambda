@@ -22,7 +22,7 @@ namespace TekstVertaler.Tests
                 {
                     new SQSEvent.SQSMessage
                     {
-                        Body = "{\"category\":\"Entertainment: Video Games\",\"type\":\"multiple\",\"difficulty\":\"easy\",\"question\":\"Half - Life by Valve uses the GoldSrc game engine, which is a highly modified version of what engine ?\",\"correct_answer\":\"Quake Engine\",\"Id\":1485,\"UUID\":\"3c9a9ad0-fb0a-11e8-ace1-b05216d697df\"}"
+                        Body = "{category:\"Art\",type: \"multiple\",difficulty: \"easy\",question: \"Who painted \\\"Swans Reflecting Elephants\\\", \\\"Sleep\\\", and \\\"The Persistence of Memory\\\"?\",correct_answer: \"Salvador Dali\",Id: 877,UUID: \"5559a510-fc7d-11e8-9c65-b05216d697df\"}"
                     }
                 }
             };
@@ -34,9 +34,9 @@ namespace TekstVertaler.Tests
             };
 
             var function = new Function();
-            await function.FunctionHandler(sqsEvent, context);
+            bool questionTranslated = await function.FunctionHandler(sqsEvent, context);
 
-            Assert.Contains("Processed message foobar", logger.Buffer.ToString());
+            Assert.True(questionTranslated);
         }
     }
 }
