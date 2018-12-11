@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
@@ -64,7 +65,7 @@ namespace ZoekVragen
 #else
             using (AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient())
             {
-                categoryQueueURL = await ssmCLient.GetParameterValueAsync("vragen_queue_url".ConvertToParameterRequest());
+                questionsQueueURL = await ssmCLient.GetParameterValueAsync("vragen_queue_url".ConvertToParameterRequest());
                 neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
                 neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
                 neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
@@ -72,6 +73,10 @@ namespace ZoekVragen
 #endif
 
             CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(message.Body);
+            CategoryNode categoryNode = new CategoryNode
+            {
+                UUID = categoryCatalog.UUID
+            };
 
             HttpClient httpClient = new HttpClient();
 
@@ -102,7 +107,7 @@ namespace ZoekVragen
             }
 
             List<QuestionNode> questionsToCreate = new List<QuestionNode>();
-            using (ISession session = driver.Session(AccessMode.Write))
+            using (ISession session = driver.Session(AccessMode.Read))
             {
                 for (int i = 0; i < questions.Count; i++)
                 {
@@ -133,11 +138,23 @@ namespace ZoekVragen
                     IStatementResultCursor result = await session.RunAsync(createQuery);
 
                     result = await session.RunAsync(matchQuery);
-
+                    QuestionNode createdQuestion = null;
                     await result.ForEachAsync(r =>
                        {
-                           questionsToTranslate.Add(r[r.Keys[0]].Map<QuestionNode>());
+                           createdQuestion = r[r.Keys[0]].Map<QuestionNode>();
+                           questionsToTranslate.Add(createdQuestion);
                        });
+
+                    try
+                    {
+                        QuestionCategoryRelationNode relationNode = new QuestionCategoryRelationNode(categoryNode, createdQuestion);
+                        string createRelationQuery = relationNode.CreateRelationQuery();
+                        await session.RunAsync(createRelationQuery);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        //throw;
+                    }
                 }
             }
 
@@ -150,11 +167,29 @@ namespace ZoekVragen
                 };
             foreach (QuestionNode question in questionsToTranslate)
             {
-                sendMessageRequest.MessageBody = JsonConvert.SerializeObject(question);
+                var serializer = new JsonSerializer();
+                var stringWriter = new StringWriter();
+                using (var writer = new JsonTextWriter(stringWriter))
+                {
+                    writer.QuoteName = false;
+                    serializer.Serialize(writer, question);
+                }
+
+                var json = stringWriter.ToString();
+                sendMessageRequest.MessageBody = json;
                 sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
             }
 
             await Task.CompletedTask;
+        }
+    }
+
+    public class QuestionCategoryRelationNode : RelationNode<CategoryNode, QuestionNode>
+    {
+        public QuestionCategoryRelationNode(CategoryNode origin, QuestionNode destiny)
+            : base(origin, destiny)
+        {
+            RelationType = "CATEGORY";
         }
     }
 }
