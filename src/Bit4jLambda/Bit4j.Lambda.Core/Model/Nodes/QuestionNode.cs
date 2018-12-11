@@ -65,22 +65,22 @@ namespace Bit4j.Lambda.Core.Model.Nodes
             }
         }
 
-        //[JsonProperty("incorrect_answers")]
-        //[Neo4jProperty(Name = "incorrect_answers")]
-        //public string[] IncorrectAnswers
-        //{
-        //    get { return _incorrectAnswers; }
-        //    set
-        //    {
-        //        _incorrectAnswers = new string[value.Length];
+        [JsonProperty("incorrect_answers")]
+        [Neo4jProperty(Name = "incorrect_answers")]
+        public string[] IncorrectAnswers
+        {
+            get { return _incorrectAnswers; }
+            set
+            {
+                _incorrectAnswers = new string[value.Length];
 
-        //        for (int i = 0; i < value.Length; i++)
-        //        {
-        //            _incorrectAnswers[i] = HttpUtility.UrlDecode(value[i]).Trim();
-        //            //_incorrectAnswers[i] = _incorrectAnswers[i].Replace("'", "\'");
-        //        }
-        //    }
-        //}
+                for (int i = 0; i < value.Length; i++)
+                {
+                    _incorrectAnswers[i] = HttpUtility.UrlDecode(value[i]).Trim();
+                    //_incorrectAnswers[i] = _incorrectAnswers[i].Replace("'", "\'");
+                }
+            }
+        }
 
         public override string ToString()
         {
