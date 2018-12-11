@@ -14,7 +14,7 @@ namespace TekstVertaler.Tests
     public class FunctionTest
     {
         [Fact]
-        public async Task TestSQSEventLambdaFunction()
+        public async Task TestTranslationLambdaFunction()
         {
             var sqsEvent = new SQSEvent
             {
@@ -22,7 +22,7 @@ namespace TekstVertaler.Tests
                 {
                     new SQSEvent.SQSMessage
                     {
-                        Body = "foobar"
+                        Body = "{category:\"Art\",type: \"multiple\",difficulty: \"easy\",question: \"Who painted \\\"Swans Reflecting Elephants\\\", \\\"Sleep\\\", and \\\"The Persistence of Memory\\\"?\",correct_answer: \"Salvador Dali\",Id: 877,UUID: \"5559a510-fc7d-11e8-9c65-b05216d697df\"}"
                     }
                 }
             };
@@ -34,9 +34,9 @@ namespace TekstVertaler.Tests
             };
 
             var function = new Function();
-            await function.FunctionHandler(sqsEvent, context);
+            bool questionTranslated = await function.FunctionHandler(sqsEvent, context);
 
-            Assert.Contains("Processed message foobar", logger.Buffer.ToString());
+            Assert.True(questionTranslated);
         }
     }
 }
