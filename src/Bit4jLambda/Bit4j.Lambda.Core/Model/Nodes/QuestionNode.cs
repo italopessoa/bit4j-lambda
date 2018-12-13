@@ -46,6 +46,7 @@ namespace Bit4j.Lambda.Core.Model.Nodes
                 _title = HttpUtility.UrlDecode(value).Trim();
             }
         }
+
         [JsonProperty("correct_answer")]
         [Neo4jProperty(Name = "correct_answer")]
         public object CorrectAnswer

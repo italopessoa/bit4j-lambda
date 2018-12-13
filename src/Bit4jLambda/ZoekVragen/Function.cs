@@ -119,7 +119,6 @@ namespace ZoekVragen
 
                     try
                     {
-
                         IStatementResultCursor result = await session.RunAsync(matchQuery);
                         bool newQuestion = true;
                         await result.ForEachAsync(r =>
@@ -151,16 +150,13 @@ namespace ZoekVragen
                 foreach (QuestionNode question in questionsToCreate)
                 {
                     string createQuery = question.MapToCypher(CypherQueryType.Create);
-                    string matchQuery = question.MapToCypher(CypherQueryType.Match);
 
                     IStatementResultCursor result = await session.RunAsync(createQuery);
 
-                    result = await session.RunAsync(matchQuery);
                     QuestionNode createdQuestion = null;
                     await result.ForEachAsync(r =>
                        {
                            createdQuestion = r[r.Keys[0]].Map<QuestionNode>();
-                           questionsToTranslate.Add(createdQuestion);
                        });
 
                     try
@@ -171,12 +167,11 @@ namespace ZoekVragen
                     }
                     catch (System.Exception ex)
                     {
-                        //throw;
                         context.Logger.LogLine("ERROR");
                         context.Logger.LogLine(ex.StackTrace);
                     }
                 }
-                context.Logger.LogLine($"QUESTIONS CFREATE DONE");
+                context.Logger.LogLine($"QUESTIONS CREATE DONE");
             }
 
             //AmazonSQSClient _sqsClient = AWSClientFactory.GetAmazonSQSClient();
