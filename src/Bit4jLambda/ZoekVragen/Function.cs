@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using System.Web;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.SQSEvents;
+using Amazon.SimpleSystemsManagement;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Bit4j.Lambda.Core.Extensions;
 using Bit4j.Lambda.Core.Factory;
 using Bit4j.Lambda.Core.Model;
 using Bit4j.Lambda.Core.Model.Nodes;
@@ -52,7 +54,6 @@ namespace ZoekVragen
 
         private async Task ProcessMessageAsync(SQSEvent.SQSMessage message, ILambdaContext context)
         {
-
             string questionsQueueURL = "";
             string neo4jUser = "";
             string neo4jPassword = "";
@@ -63,20 +64,19 @@ namespace ZoekVragen
             neo4jPassword = "bitcoinshow";
             neo4jServerIp = "bolt://127.0.0.1:7687";
 #else
-            using (AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient())
-            {
-                questionsQueueURL = await ssmCLient.GetParameterValueAsync("vragen_queue_url".ConvertToParameterRequest());
-                neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
-                neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
-                neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
-            }
+            AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient();
+            questionsQueueURL = await ssmCLient.GetParameterValueAsync("vragen_queue_url".ConvertToParameterRequest());
+            neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
+            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
+            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
 #endif
-
+            context.Logger.LogLine($"DESERIALIZING MESSAGE {message.Body}");
             CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(message.Body);
             CategoryNode categoryNode = new CategoryNode
             {
                 UUID = categoryCatalog.UUID
             };
+            context.Logger.LogLine($"MESSAGE DESERIALIZED");
 
             HttpClient httpClient = new HttpClient();
 
@@ -88,7 +88,6 @@ namespace ZoekVragen
             //TODO: count by relation
             int currentTotalQuestions = 1000;
             int amount = 50;
-
 
             List<QuestionNode> questions = new List<QuestionNode>();
             if (categoryCatalog.CategoryCount.Total < currentTotalQuestions)
@@ -106,30 +105,49 @@ namespace ZoekVragen
                 }
             }
 
-            List<QuestionNode> questionsToCreate = new List<QuestionNode>();
-            using (ISession session = driver.Session(AccessMode.Read))
+            context.Logger.LogLine($"OPEN NEO4J CONNECTION");
+            List<QuestionNode> questionsToTranslate = new List<QuestionNode>();
+            using (ISession session = driver.Session(AccessMode.Write))
             {
+                context.Logger.LogLine($"{questions.Count} QUESTIONS FOUND ON CATEGORY {categoryCatalog.Id}");
+                List<QuestionNode> questionsToCreate = new List<QuestionNode>();
+
                 for (int i = 0; i < questions.Count; i++)
                 {
                     QuestionNode question = questions[i];
                     string matchQuery = question.MapToCypher(CypherQueryType.Match);
 
-                    IStatementResultCursor result = await session.RunAsync(matchQuery);
-
-                    bool newQuestion = true;
-                    await result.ForEachAsync(r =>
+                    try
                     {
-                        newQuestion = r.Keys.Count == 0;
-                    });
 
-                    if (newQuestion)
-                        questionsToCreate.Add(question);
+                        IStatementResultCursor result = await session.RunAsync(matchQuery);
+                        bool newQuestion = true;
+                        await result.ForEachAsync(r =>
+                        {
+                            newQuestion = r.Keys.Count == 0;
+                        });
+
+                        if (newQuestion)
+                            questionsToCreate.Add(question);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        context.Logger.LogLine($"=================== ERROR WHILE CHECKING EXISTING QUESTIONS =================== ");
+                        context.Logger.LogLine(matchQuery);
+                        context.Logger.LogLine(ex.Message);
+                        context.Logger.LogLine(ex.StackTrace);
+                        if(ex.InnerException != null)
+                        {
+                            context.Logger.LogLine(ex.InnerException.Message);
+                            context.Logger.LogLine(ex.InnerException.StackTrace);
+                        }
+
+                        context.Logger.LogLine($"=================== END ERROR WHILE CHECKING EXISTING QUESTIONS =================== ");
+                    }
                 }
-            }
 
-            List<QuestionNode> questionsToTranslate = new List<QuestionNode>();
-            using (ISession session = driver.Session(AccessMode.Write))
-            {
+                context.Logger.LogLine($"START CREATION");
+
                 foreach (QuestionNode question in questionsToCreate)
                 {
                     string createQuery = question.MapToCypher(CypherQueryType.Create);
@@ -154,8 +172,11 @@ namespace ZoekVragen
                     catch (System.Exception ex)
                     {
                         //throw;
+                        context.Logger.LogLine("ERROR");
+                        context.Logger.LogLine(ex.StackTrace);
                     }
                 }
+                context.Logger.LogLine($"QUESTIONS CFREATE DONE");
             }
 
             AmazonSQSClient _sqsClient = AWSClientFactory.GetAmazonSQSClient();
@@ -172,6 +193,7 @@ namespace ZoekVragen
                 using (var writer = new JsonTextWriter(stringWriter))
                 {
                     writer.QuoteName = false;
+                    serializer.NullValueHandling = NullValueHandling.Ignore;
                     serializer.Serialize(writer, question);
                 }
 

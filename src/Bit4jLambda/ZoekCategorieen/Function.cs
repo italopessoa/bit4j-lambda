@@ -40,20 +40,24 @@ namespace ZoekCategorieen
             neo4jUser = "neo4j";
             neo4jPassword = "bitcoinshow";
             neo4jServerIp = "bolt://127.0.0.1:7687";
+            context.Logger.LogLine("LOADING CREDENTIALS");
 #else
-            using (AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient())
-            {
-                categoryQueueURL = await ssmCLient.GetParameterValueAsync("categorieen_queue_url".ConvertToParameterRequest());
-                neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
-                neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
-                neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
-            }
+            AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient();
+            categoryQueueURL = await ssmCLient.GetParameterValueAsync("categorieen_queue_url".ConvertToParameterRequest());
+            context.Logger.LogLine("LOADING categoryQueueURL ");
+            neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
+            context.Logger.LogLine("LOADING neo4jUser  ");
+            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
+            context.Logger.LogLine("LOADING neo4jPassword ");
+            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
+            context.Logger.LogLine("LOADING neo4jServerIp ");
 #endif
 
             IDriver driver = GraphDatabase.Driver(neo4jServerIp, AuthTokens.Basic(neo4jUser, neo4jPassword));
 
             HttpClient httpClient = new HttpClient();
             var response = await httpClient.GetAsync("https://opentdb.com/api_count_global.php");
+
             Catalog catalog = JsonConvert.DeserializeObject<Catalog>(await response.Content.ReadAsStringAsync());
 
             int neo4jRegisteredQuestions = 0;
@@ -91,6 +95,7 @@ namespace ZoekCategorieen
                             await session.RunAsync(createQuery);
                             result = await session.RunAsync(matchQuery);
 
+                            context.Logger.LogLine($"CATEGORY \"{categoryNode.Name}\" CREATED");
                             await result.ForEachAsync(r =>
                             {
                                 actualCategoryNode = r[r.Keys[0]].Map<CategoryNode>();

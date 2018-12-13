@@ -51,7 +51,12 @@ namespace TekstVertaler
             catch (System.Exception ex)
             {
                 context.Logger.LogLine("************ ERROR ***************");
+                context.Logger.LogLine(ex.Message);
                 context.Logger.LogLine(ex.StackTrace);
+                if(ex.InnerException != null)
+                {
+                    context.Logger.LogLine(ex.InnerException.Message);
+                }
                 context.Logger.LogLine("************ END-ERROR ***********");
                 return false;
             }
@@ -62,27 +67,26 @@ namespace TekstVertaler
         private async Task ProcessMessageAsync(SQSEvent.SQSMessage message, ILambdaContext context)
         {
             context.Logger.LogLine($"Processed message {message.Body}");
-
-            string vertaaldeVragenQueueURL = "";
+            
             string neo4jUser = "";
             string neo4jPassword = "";
             string neo4jServerIp = "";
             string gcCredentialsJson = "";
 #if DEBUG
-            vertaaldeVragenQueueURL = "";
             neo4jUser = "neo4j";
             neo4jPassword = "bitcoinshow";
             neo4jServerIp = "bolt://127.0.0.1:7687";
             gcCredentialsJson = "";
 #else
-            using (AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient())
-            {
-                vertaaldeVragenQueueURL = await ssmCLient.GetParameterValueAsync("vertaalde_vragen_queue_url".ConvertToParameterRequest());
-                neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
-                neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
-                neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
-                gcCredentialsJson = await ssmCLient.GetParameterValueAsync("gc_translate".ConvertToParameterRequest(true));
-            }
+            AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient();
+            neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
+            context.Logger.LogLine("LOADING neo4jUser  ");
+            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
+            context.Logger.LogLine("LOADING neo4jPassword ");
+            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
+            context.Logger.LogLine("LOADING neo4jServerIp ");
+            gcCredentialsJson = await ssmCLient.GetParameterValueAsync("gc_translate".ConvertToParameterRequest(true));
+            context.Logger.LogLine("LOADING gc_translate ");
 #endif
             QuestionNode questionToTranslate = JsonConvert.DeserializeObject<QuestionNode>(message.Body);
             GoogleCredential credential = GoogleCredential.FromJson(gcCredentialsJson);
