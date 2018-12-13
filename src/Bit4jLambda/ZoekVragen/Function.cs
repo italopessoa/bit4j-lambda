@@ -66,9 +66,9 @@ namespace ZoekVragen
 #else
             AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient();
             questionsQueueURL = await ssmCLient.GetParameterValueAsync("vragen_queue_url".ConvertToParameterRequest());
-            neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
-            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
-            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
+            neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest());
+            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest());
+            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest());
 #endif
             context.Logger.LogLine($"DESERIALIZING MESSAGE {message.Body}");
             CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(message.Body);

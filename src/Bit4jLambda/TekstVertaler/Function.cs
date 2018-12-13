@@ -79,13 +79,13 @@ namespace TekstVertaler
             gcCredentialsJson = "";
 #else
             AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient();
-            neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
+            neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest());
             context.Logger.LogLine("LOADING neo4jUser  ");
-            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
+            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest());
             context.Logger.LogLine("LOADING neo4jPassword ");
-            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
+            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest());
             context.Logger.LogLine("LOADING neo4jServerIp ");
-            gcCredentialsJson = await ssmCLient.GetParameterValueAsync("gc_translate".ConvertToParameterRequest(true));
+            gcCredentialsJson = await ssmCLient.GetParameterValueAsync("gc_translate_np".ConvertToParameterRequest());
             context.Logger.LogLine("LOADING gc_translate ");
 #endif
             QuestionNode questionToTranslate = JsonConvert.DeserializeObject<QuestionNode>(message.Body);

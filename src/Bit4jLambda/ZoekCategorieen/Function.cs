@@ -47,9 +47,9 @@ namespace ZoekCategorieen
             context.Logger.LogLine("LOADING categoryQueueURL ");
             neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
             context.Logger.LogLine("LOADING neo4jUser  ");
-            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest(true));
+            neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest());
             context.Logger.LogLine("LOADING neo4jPassword ");
-            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest(true));
+            neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest());
             context.Logger.LogLine("LOADING neo4jServerIp ");
 #endif
 
