@@ -179,28 +179,28 @@ namespace ZoekVragen
                 context.Logger.LogLine($"QUESTIONS CFREATE DONE");
             }
 
-            AmazonSQSClient _sqsClient = AWSClientFactory.GetAmazonSQSClient();
-            SendMessageResponse sendMessageResponse = null;
-            SendMessageRequest sendMessageRequest =
-                new SendMessageRequest
-                {
-                    QueueUrl = questionsQueueURL
-                };
-            foreach (QuestionNode question in questionsToTranslate)
-            {
-                var serializer = new JsonSerializer();
-                var stringWriter = new StringWriter();
-                using (var writer = new JsonTextWriter(stringWriter))
-                {
-                    writer.QuoteName = false;
-                    serializer.NullValueHandling = NullValueHandling.Ignore;
-                    serializer.Serialize(writer, question);
-                }
+            //AmazonSQSClient _sqsClient = AWSClientFactory.GetAmazonSQSClient();
+            //SendMessageResponse sendMessageResponse = null;
+            //SendMessageRequest sendMessageRequest =
+            //    new SendMessageRequest
+            //    {
+            //        QueueUrl = questionsQueueURL
+            //    };
+            //foreach (QuestionNode question in questionsToTranslate)
+            //{
+            //    var serializer = new JsonSerializer();
+            //    var stringWriter = new StringWriter();
+            //    using (var writer = new JsonTextWriter(stringWriter))
+            //    {
+            //        writer.QuoteName = false;
+            //        serializer.NullValueHandling = NullValueHandling.Ignore;
+            //        serializer.Serialize(writer, question);
+            //    }
 
-                var json = stringWriter.ToString();
-                sendMessageRequest.MessageBody = json;
-                sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
-            }
+            //    var json = stringWriter.ToString();
+            //    sendMessageRequest.MessageBody = json;
+            //    sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
+            //}
 
             await Task.CompletedTask;
         }
