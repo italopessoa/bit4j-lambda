@@ -40,13 +40,13 @@ namespace ZoekCategorieen
             neo4jUser = "neo4j";
             neo4jPassword = "bitcoinshow";
             neo4jServerIp = "bolt://127.0.0.1:7687";
-            context.Logger.LogLine("LOADING CREDENTIALS");
 #else
+            context.Logger.LogLine("LOADING CREDENTIALS");
             AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient();
             categoryQueueURL = await ssmCLient.GetParameterValueAsync("categorieen_queue_url".ConvertToParameterRequest());
             context.Logger.LogLine("LOADING categoryQueueURL ");
             neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest(true));
-            context.Logger.LogLine("LOADING neo4jUser  ");
+            context.Logger.LogLine("LOADING neo4jUser");
             neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest());
             context.Logger.LogLine("LOADING neo4jPassword ");
             neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest());

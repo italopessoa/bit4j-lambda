@@ -12,8 +12,10 @@ namespace Bit4j.Lambda.Core.Model.Nodes
     public class QuestionNode : Neo4jNode
     {
         private string _title;
+        private string _title_pt;
         private string _type;
         private object _correctAnswer;
+        private object _correctAnswer_pt;
         private string _category;
         private string[] _incorrectAnswers;
 
@@ -44,6 +46,18 @@ namespace Bit4j.Lambda.Core.Model.Nodes
             set
             {
                 _title = HttpUtility.UrlDecode(value).Trim();
+                _title_pt = _title;
+            }
+        }
+
+        [JsonProperty("question_pt")]
+        [Neo4jProperty(Name = "title_pt")]
+        public string TitlePT
+        {
+            get { return _title_pt; }
+            set
+            {
+                _title_pt = HttpUtility.UrlDecode(value).Trim();
             }
         }
 
@@ -62,6 +76,26 @@ namespace Bit4j.Lambda.Core.Model.Nodes
                 {
                     string aux = HttpUtility.UrlDecode(value.ToString().Replace("'", "\'")).Trim();
                     _correctAnswer = aux;
+                    _correctAnswer_pt = aux;
+                }
+            }
+        }
+
+        [JsonProperty("correct_answer_pt")]
+        [Neo4jProperty(Name = "correct_answer_pt")]
+        public object CorrectAnswerPT
+        {
+            get { return _correctAnswer_pt; }
+            set
+            {
+                if (value.GetType() == typeof(long))
+                {
+                    _correctAnswer_pt = value;
+                }
+                else
+                {
+                    string aux = HttpUtility.UrlDecode(value.ToString().Replace("'", "\'")).Trim();
+                    _correctAnswer_pt = aux;
                 }
             }
         }

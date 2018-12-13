@@ -13,6 +13,8 @@ using Bit4j.Lambda.Core.Factory;
 using Bit4j.Lambda.Core.Model;
 using Bit4j.Lambda.Core.Model.Nodes;
 using Bit4j.Lambda.Core.Model.OpenTDB;
+using Google.Apis.Auth.OAuth2;
+using Google.Cloud.Translation.V2;
 using Neo4j.Driver.V1;
 using Neo4j.Map.Extension.Map;
 using Neo4j.Map.Extension.Model;
@@ -54,22 +56,29 @@ namespace ZoekVragen
 
         private async Task ProcessMessageAsync(SQSEvent.SQSMessage message, ILambdaContext context)
         {
-            string questionsQueueURL = "";
             string neo4jUser = "";
             string neo4jPassword = "";
             string neo4jServerIp = "";
 #if DEBUG
-            questionsQueueURL = "";
             neo4jUser = "neo4j";
             neo4jPassword = "bitcoinshow";
             neo4jServerIp = "bolt://127.0.0.1:7687";
 #else
             AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient();
-            questionsQueueURL = await ssmCLient.GetParameterValueAsync("vragen_queue_url".ConvertToParameterRequest());
+            context.Logger.LogLine("LOADING CREDENTIALS");
             neo4jUser = await ssmCLient.GetParameterValueAsync("neo4j_user".ConvertToParameterRequest());
+            context.Logger.LogLine("GET neo4jUser");
             neo4jPassword = await ssmCLient.GetParameterValueAsync("neo4j_password".ConvertToParameterRequest());
+            context.Logger.LogLine("GET neo4jPassword");
             neo4jServerIp = await ssmCLient.GetParameterValueAsync("neo4j_server_ip".ConvertToParameterRequest());
+            context.Logger.LogLine("GET neo4jServerIp");
+            string gcCredentialsJson = await ssmCLient.GetParameterValueAsync("gc_translate_ns".ConvertToParameterRequest());
+            GoogleCredential credential = GoogleCredential.FromJson(gcCredentialsJson);
+            TranslationClient translationClient = TranslationClient.Create(credential);
+            context.Logger.LogLine("GET gc_translate");
+            context.Logger.LogLine("LOADING CREDENTIALS DONE");
 #endif
+
             context.Logger.LogLine($"DESERIALIZING MESSAGE {message.Body}");
             CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(message.Body);
             CategoryNode categoryNode = new CategoryNode
@@ -106,10 +115,10 @@ namespace ZoekVragen
             }
 
             context.Logger.LogLine($"OPEN NEO4J CONNECTION");
-            List<QuestionNode> questionsToTranslate = new List<QuestionNode>();
+            context.Logger.LogLine($"{questions.Count} QUESTIONS FOUND ON CATEGORY {categoryCatalog.Id}");
+
             using (ISession session = driver.Session(AccessMode.Write))
             {
-                context.Logger.LogLine($"{questions.Count} QUESTIONS FOUND ON CATEGORY {categoryCatalog.Id}");
                 List<QuestionNode> questionsToCreate = new List<QuestionNode>();
 
                 for (int i = 0; i < questions.Count; i++)
@@ -135,7 +144,7 @@ namespace ZoekVragen
                         context.Logger.LogLine(matchQuery);
                         context.Logger.LogLine(ex.Message);
                         context.Logger.LogLine(ex.StackTrace);
-                        if(ex.InnerException != null)
+                        if (ex.InnerException != null)
                         {
                             context.Logger.LogLine(ex.InnerException.Message);
                             context.Logger.LogLine(ex.InnerException.StackTrace);
@@ -145,12 +154,21 @@ namespace ZoekVragen
                     }
                 }
 
-                context.Logger.LogLine($"START CREATION");
+#if (!DEBUG)
+                context.Logger.LogLine($"START CREATING/TRANSLATING QUESTIONS");
+#else
+                context.Logger.LogLine($"START CREATING QUESTIONS");
+#endif
 
                 foreach (QuestionNode question in questionsToCreate)
                 {
-                    string createQuery = question.MapToCypher(CypherQueryType.Create);
+#if (!DEBUG)
+                    question.TitlePT = translationClient.TranslateText(question.Title, "pt", "en").TranslatedText;
 
+                    if (question.CorrectAnswer.GetType() == typeof(string))
+                        question.CorrectAnswerPT = translationClient.TranslateText(question.CorrectAnswer.ToString(), "pt", "en").TranslatedText;
+#endif
+                    string createQuery = question.MapToCypher(CypherQueryType.Create);
                     IStatementResultCursor result = await session.RunAsync(createQuery);
 
                     QuestionNode createdQuestion = null;
@@ -161,7 +179,7 @@ namespace ZoekVragen
 
                     try
                     {
-                        QuestionCategoryRelationNode relationNode = new QuestionCategoryRelationNode(categoryNode, createdQuestion);
+                        QuestionCategoryRelationNode relationNode = new QuestionCategoryRelationNode(createdQuestion, categoryNode);
                         string createRelationQuery = relationNode.CreateRelationQuery();
                         await session.RunAsync(createRelationQuery);
                     }
@@ -171,42 +189,19 @@ namespace ZoekVragen
                         context.Logger.LogLine(ex.StackTrace);
                     }
                 }
-                context.Logger.LogLine($"QUESTIONS CREATE DONE");
+                context.Logger.LogLine($"FINISHED QUESTIONS CREATION");
             }
-
-            //AmazonSQSClient _sqsClient = AWSClientFactory.GetAmazonSQSClient();
-            //SendMessageResponse sendMessageResponse = null;
-            //SendMessageRequest sendMessageRequest =
-            //    new SendMessageRequest
-            //    {
-            //        QueueUrl = questionsQueueURL
-            //    };
-            //foreach (QuestionNode question in questionsToTranslate)
-            //{
-            //    var serializer = new JsonSerializer();
-            //    var stringWriter = new StringWriter();
-            //    using (var writer = new JsonTextWriter(stringWriter))
-            //    {
-            //        writer.QuoteName = false;
-            //        serializer.NullValueHandling = NullValueHandling.Ignore;
-            //        serializer.Serialize(writer, question);
-            //    }
-
-            //    var json = stringWriter.ToString();
-            //    sendMessageRequest.MessageBody = json;
-            //    sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
-            //}
 
             await Task.CompletedTask;
         }
     }
 
-    public class QuestionCategoryRelationNode : RelationNode<CategoryNode, QuestionNode>
+    public class QuestionCategoryRelationNode : RelationNode<QuestionNode, CategoryNode>
     {
-        public QuestionCategoryRelationNode(CategoryNode origin, QuestionNode destiny)
+        public QuestionCategoryRelationNode(QuestionNode origin, CategoryNode destiny)
             : base(origin, destiny)
         {
-            RelationType = "CATEGORY";
+            RelationType = "HAS_CATEGORY";
         }
     }
 }
