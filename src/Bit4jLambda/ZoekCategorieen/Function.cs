@@ -81,7 +81,7 @@ namespace ZoekCategorieen
                     {
                         CategoryNode categoryNode = new CategoryNode(categories.Categories[i]);
                         CategoryNode actualCategoryNode = null;
-                        string matchQuery = categoryNode.MapToCypher(CypherQueryType.Match);
+                        string matchQuery = categoryNode.MapToCypher(CypherQueryType.MatchProperties, new string[] { "Name" });
                         IStatementResultCursor result = await session.RunAsync(matchQuery);
 
                         await result.ForEachAsync(r =>
@@ -102,12 +102,14 @@ namespace ZoekCategorieen
                             });
                         }
 
+#if (!DEBUG)
                         response = await httpClient.GetAsync($"https://opentdb.com/api_count.php?category={categoryNode.CategoryId}");
                         CategoryCatalog categoryCatalog = JsonConvert.DeserializeObject<CategoryCatalog>(await response.Content.ReadAsStringAsync());
                         categoryCatalog.UUID = actualCategoryNode.UUID;
 
                         sendMessageRequest.MessageBody = JsonConvert.SerializeObject(categoryCatalog);
                         sendMessageResponse = await _sqsClient.SendMessageAsync(sendMessageRequest);
+#endif
                     }
                 }
             }

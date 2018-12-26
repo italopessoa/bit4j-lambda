@@ -1,47 +1,100 @@
-using System;
+using Amazon.Lambda.Core;
+using Amazon.Lambda.SQSEvents;
+using Amazon.Lambda.TestUtilities;
+
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 using Xunit;
-using Amazon.Lambda.TestUtilities;
-using Amazon.Lambda.SQSEvents;
-
-using ZoekVragen;
+using Xunit.Abstractions;
 
 namespace ZoekVragen.Tests
 {
+    public class TestLambdaLogger : ILambdaLogger
+    {
+        readonly ITestOutputHelper output;
+
+        public TestLambdaLogger(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
+        public void Log(string message)
+        {
+            Debug.Write(message);
+            output.WriteLine(message);
+        }
+
+        public void LogLine(string message)
+        {
+            Debug.WriteLine(message);
+            output.WriteLine(message);
+        }
+    }
     public class FunctionTest
     {
+        readonly ITestOutputHelper output;
+
+        public FunctionTest(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
         [Fact]
         public async Task TestCreateQuestionstLambdaFunction()
         {
-            var sqsEvent = new SQSEvent
+            List<string> categories = new List<string>()
             {
-                Records = new List<SQSEvent.SQSMessage>
+                "{\"category_id\":9,\"name\":\"General Knowledge\",\"uuid\":\"e820f080053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":10,\"name\":\"Entertainment: Books\",\"uuid\":\"e8587b40053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":11,\"name\":\"Entertainment: Film\",\"uuid\":\"e86f85b0053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":12,\"name\":\"Entertainment: Music\",\"uuid\":\"e8864200053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":13,\"name\":\"Entertainment: Musicals & Theatres\",\"uuid\":\"e8929e10053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":14,\"name\":\"Entertainment: Television\",\"uuid\":\"e89f4840053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":15,\"name\":\"Entertainment: Video Games\",\"uuid\":\"e8aae100053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":16,\"name\":\"Entertainment: Board Games\",\"uuid\":\"e8b51a30053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":17,\"name\":\"Science & Nature\",\"uuid\":\"e8c17640053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":18,\"name\":\"Science: Computers\",\"uuid\":\"e8cb1330053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":19,\"name\":\"Science: Mathematics\",\"uuid\":\"e8d54c60053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":20,\"name\":\"Mythology\",\"uuid\":\"e8e244b0053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":21,\"name\":\"Sports\",\"uuid\":\"e8ecf310053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":22,\"name\":\"Geography\",\"uuid\":\"e8fcaa80053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":23,\"name\":\"History\",\"uuid\":\"e90cb010053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":24,\"name\":\"Politics\",\"uuid\":\"e917fab0053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":25,\"name\":\"Art\",\"uuid\":\"e922d020053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":26,\"name\":\"Celebrities\",\"uuid\":\"e95ddd50053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":27,\"name\":\"Animals\",\"uuid\":\"e96ad5a0053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":28,\"name\":\"Vehicles\",\"uuid\":\"e9769570053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                //"{\"category_id\":29,\"name\":\"Entertainment: Comics\",\"uuid\":\"e9869b00053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                "{\"category_id\":30,\"name\":\"Science: Gadgets\",\"uuid\":\"e990fb40053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                "{\"category_id\":31,\"name\":\"Entertainment: Japanese Anime & Manga\",\"uuid\":\"e99b5b80053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}",
+                "{\"category_id\":32,\"name\":\"Entertainment: Cartoon & Animations\",\"uuid\":\"e9a74260053111e9a8c1b05216d697df\" ,\"category_question_count\" : {\"total_question_count\": 799}}"
+            };
+
+
+            foreach (var category in categories)
+            {
+                var sqsEvent = new SQSEvent
+                {
+                    Records = new List<SQSEvent.SQSMessage>
                 {
                     new SQSEvent.SQSMessage
                     {
-                        //Body = "{\"category_id\":15,\"uuid\":\"64490320-f577-11e8-82f2-b05216d697df\",\"category_question_count\":{ \"total_question_count\":799}}"
-                        //Body = "{\"category_id\":22,\"uuid\":\"64490320-f577-11e8-82f2-b05216d697df\",\"category_question_count\":{ \"total_question_count\":22}}"
-                        //Body = "{\"category_id\":12,\"name\":\"Art\",\"uuid\":\"4027b7d0-fd3c-11e8-bbc2-12e9ac86eb58\",\"category_question_count\": {\"total_question_count\": 22 }}"
-                        //Body = "{\"category_id\":13,\"name\":\"Art\",\"uuid\":\"cac08180-fe07-11e8-9507-12e9ac86eb58\",\"category_question_count\": {\"total_question_count\": 22 }}"
-                        Body = "{\"category_id\":17,\"name\":\"Art\",\"uuid\":\"c25cc640-fe32-11e8-9fd1-12e9ac86eb58\",\"category_question_count\": {\"total_question_count\": 174 }}"
+                        Body = category
                     }
                 }
-            };
+                };
 
-            var logger = new TestLambdaLogger();
-            var context = new TestLambdaContext
-            {
-                Logger = logger
-            };
+                var logger = new TestLambdaLogger(output);
+                var context = new TestLambdaContext
+                {
+                    Logger = logger
+                };
 
-            var function = new Function();
-            await function.FunctionHandler(sqsEvent, context);
-
-            //Assert.Contains("Processed message foobar", logger.Buffer.ToString());
-            //MATCH(n: Question { category: 'Entertainment: Music', type: 'multiple', difficulty: 'medium', title: 'Which of the following bands is Tom DeLonge not a part of?', correct_answer: +44}) RETURN n
+                var function = new Function();
+                await function.FunctionHandler(sqsEvent, context);
+            }
         }
     }
 }

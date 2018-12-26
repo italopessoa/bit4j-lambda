@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -20,7 +22,6 @@ using Neo4j.Map.Extension.Map;
 using Neo4j.Map.Extension.Model;
 using Newtonsoft.Json;
 
-
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
@@ -28,6 +29,8 @@ namespace ZoekVragen
 {
     public class Function
     {
+        private readonly bool _enableTranslation = false;
+        TranslationClient _translationClient;
         /// <summary>
         /// Default constructor. This constructor is used by Lambda to construct the instance. When invoked in a Lambda environment
         /// the AWS credentials will come from the IAM role associated with the function and the AWS region will be set to the
@@ -35,7 +38,8 @@ namespace ZoekVragen
         /// </summary>
         public Function()
         {
-
+            if (Environment.GetEnvironmentVariable("ENABLE_TRANSLATION") != null)
+                _enableTranslation = Environment.GetEnvironmentVariable("ENABLE_TRANSLATION").ToLowerInvariant().Equals("y");
         }
 
 
@@ -60,8 +64,8 @@ namespace ZoekVragen
             string neo4jPassword = "";
             string neo4jServerIp = "";
 #if DEBUG
-            neo4jUser = "neo4j";
-            neo4jPassword = "bitcoinshow";
+            neo4jUser = "dev";
+            neo4jPassword = "neo4j";
             neo4jServerIp = "bolt://127.0.0.1:7687";
 #else
             AmazonSimpleSystemsManagementClient ssmCLient = AWSClientFactory.GetAmazonSimpleSystemsManagementClient();
@@ -74,7 +78,7 @@ namespace ZoekVragen
             context.Logger.LogLine("GET neo4jServerIp");
             string gcCredentialsJson = await ssmCLient.GetParameterValueAsync("gc_translate_ns".ConvertToParameterRequest());
             GoogleCredential credential = GoogleCredential.FromJson(gcCredentialsJson);
-            TranslationClient translationClient = TranslationClient.Create(credential);
+            _translationClient = TranslationClient.Create(credential);
             context.Logger.LogLine("GET gc_translate");
             context.Logger.LogLine("LOADING CREDENTIALS DONE");
 #endif
@@ -98,6 +102,8 @@ namespace ZoekVragen
             int currentTotalQuestions = 1000;
             int amount = 50;
 
+            #region GET QUESTIONS
+
             List<QuestionNode> questions = new List<QuestionNode>();
             if (categoryCatalog.CategoryCount.Total < currentTotalQuestions)
             {
@@ -114,6 +120,8 @@ namespace ZoekVragen
                 }
             }
 
+            #endregion GET QUESTIONS
+
             context.Logger.LogLine($"OPEN NEO4J CONNECTION");
             context.Logger.LogLine($"{questions.Count} QUESTIONS FOUND ON CATEGORY {categoryCatalog.Id}");
 
@@ -121,10 +129,12 @@ namespace ZoekVragen
             {
                 List<QuestionNode> questionsToCreate = new List<QuestionNode>();
 
+                #region CHECKING EXISTING QUESTIONS
+
                 for (int i = 0; i < questions.Count; i++)
                 {
                     QuestionNode question = questions[i];
-                    string matchQuery = question.MapToCypher(CypherQueryType.Match);
+                    string matchQuery = question.MapToCypher(CypherQueryType.MatchProperties, new string[] { "Title", "Category" });
 
                     try
                     {
@@ -138,7 +148,7 @@ namespace ZoekVragen
                         if (newQuestion)
                             questionsToCreate.Add(question);
                     }
-                    catch (System.Exception ex)
+                    catch (Exception ex)
                     {
                         context.Logger.LogLine($"=================== ERROR WHILE CHECKING EXISTING QUESTIONS =================== ");
                         context.Logger.LogLine(matchQuery);
@@ -154,21 +164,41 @@ namespace ZoekVragen
                     }
                 }
 
-#if (!DEBUG)
+                #endregion CHECKING EXISTING QUESTIONS
+
+                #region CREATE QUESTIONS
+
                 context.Logger.LogLine($"START CREATING/TRANSLATING QUESTIONS");
-#else
-                context.Logger.LogLine($"START CREATING QUESTIONS");
-#endif
 
                 foreach (QuestionNode question in questionsToCreate)
                 {
-#if (!DEBUG)
-                    question.TitlePT = translationClient.TranslateText(question.Title, "pt", "en").TranslatedText;
+                    question.TitlePT = TranslateString(question.Title);
 
                     if (question.CorrectAnswer.GetType() == typeof(string))
-                        question.CorrectAnswerPT = translationClient.TranslateText(question.CorrectAnswer.ToString(), "pt", "en").TranslatedText;
-#endif
-                    string createQuery = question.MapToCypher(CypherQueryType.Create);
+                        question.CorrectAnswerPT = TranslateString(question.CorrectAnswer.ToString());
+
+                    string createQuery = string.Empty;
+                    try
+                    {
+
+                        TranslateQuestion(question);
+                        createQuery = question.MapToCypher(CypherQueryType.Create);
+                    }
+                    catch (Exception ex)
+                    {
+                        context.Logger.LogLine($"=================== ERROR TO MAP CREATE QUERY =================== ");
+                        context.Logger.LogLine(JsonConvert.SerializeObject(question));
+                        context.Logger.LogLine(ex.Message);
+                        context.Logger.LogLine(ex.StackTrace);
+                        if (ex.InnerException != null)
+                        {
+                            context.Logger.LogLine(ex.InnerException.Message);
+                            context.Logger.LogLine(ex.InnerException.StackTrace);
+                        }
+
+                        context.Logger.LogLine($"=================== ERROR TO MAP CREATE QUERY =================== ");
+                    }
+
                     IStatementResultCursor result = await session.RunAsync(createQuery);
 
                     QuestionNode createdQuestion = null;
@@ -177,22 +207,59 @@ namespace ZoekVragen
                            createdQuestion = r[r.Keys[0]].Map<QuestionNode>();
                        });
 
+                    if (createdQuestion == null)
+                    {
+                        context.Logger.LogLine("QUESTION NOT CREATED");
+                        context.Logger.LogLine(createQuery);
+                    }
+
                     try
                     {
                         QuestionCategoryRelationNode relationNode = new QuestionCategoryRelationNode(createdQuestion, categoryNode);
                         string createRelationQuery = relationNode.CreateRelationQuery();
-                        await session.RunAsync(createRelationQuery);
+                        result = await session.RunAsync(createRelationQuery);
                     }
-                    catch (System.Exception ex)
+                    catch (Exception ex)
                     {
-                        context.Logger.LogLine("ERROR");
+                        context.Logger.LogLine($"=================== ERROR TO CREATE QUESTION =================== ");
+                        context.Logger.LogLine(createQuery);
+                        context.Logger.LogLine(ex.Message);
                         context.Logger.LogLine(ex.StackTrace);
+                        if (ex.InnerException != null)
+                        {
+                            context.Logger.LogLine(ex.InnerException.Message);
+                            context.Logger.LogLine(ex.InnerException.StackTrace);
+                        }
+
+                        context.Logger.LogLine($"=================== ERROR TO CREATE QUESTION =================== ");
                     }
                 }
                 context.Logger.LogLine($"FINISHED QUESTIONS CREATION");
+
+                #endregion CREATE QUESTIONS
             }
 
+
             await Task.CompletedTask;
+        }
+
+        private void TranslateQuestion(QuestionNode question)
+        {
+            if (question.Type.Equals("boolean"))
+            {
+                question.CorrectAnswerPT = bool.TrueString.Equals(question.CorrectAnswer) ? "Verdadeiro" : "Falso";
+                question.IncorrectAnswersPT = bool.TrueString.Equals(question.IncorrectAnswers[0]) ? new string[] { "Verdadeiro" } : new string[] { "Falso" };
+            }
+
+            question.TitlePT = TranslateString(question.Title);
+        }
+
+        private string TranslateString(string message)
+        {
+            if (_enableTranslation)
+                return _translationClient.TranslateText(message, "pt", "en").TranslatedText;
+
+            return message;
         }
     }
 
@@ -205,4 +272,3 @@ namespace ZoekVragen
         }
     }
 }
-

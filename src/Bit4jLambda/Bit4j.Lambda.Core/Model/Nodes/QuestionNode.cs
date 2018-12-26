@@ -1,9 +1,8 @@
 ﻿using Neo4j.Map.Extension.Attributes;
 using Neo4j.Map.Extension.Model;
+
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+
 using System.Web;
 
 namespace Bit4j.Lambda.Core.Model.Nodes
@@ -18,8 +17,8 @@ namespace Bit4j.Lambda.Core.Model.Nodes
         private object _correctAnswer_pt;
         private string _category;
         private string[] _incorrectAnswers;
+        private string[] _incorrectAnswers_pt;
 
-        [JsonProperty("category")]
         [Neo4jProperty(Name = "category")]
         public string Category
         {
@@ -46,7 +45,6 @@ namespace Bit4j.Lambda.Core.Model.Nodes
             set
             {
                 _title = HttpUtility.UrlDecode(value).Trim();
-                _title_pt = _title;
             }
         }
 
@@ -76,7 +74,6 @@ namespace Bit4j.Lambda.Core.Model.Nodes
                 {
                     string aux = HttpUtility.UrlDecode(value.ToString().Replace("'", "\'")).Trim();
                     _correctAnswer = aux;
-                    _correctAnswer_pt = aux;
                 }
             }
         }
@@ -112,7 +109,22 @@ namespace Bit4j.Lambda.Core.Model.Nodes
                 for (int i = 0; i < value.Length; i++)
                 {
                     _incorrectAnswers[i] = HttpUtility.UrlDecode(value[i]).Trim();
-                    //_incorrectAnswers[i] = _incorrectAnswers[i].Replace("'", "\'");
+                }
+            }
+        }
+
+        [JsonProperty("incorrect_answers_pt")]
+        [Neo4jProperty(Name = "incorrect_answers_pt")]
+        public string[] IncorrectAnswersPT
+        {
+            get { return _incorrectAnswers; }
+            set
+            {
+                _incorrectAnswers = new string[value.Length];
+
+                for (int i = 0; i < value.Length; i++)
+                {
+                    _incorrectAnswers[i] = HttpUtility.UrlDecode(value[i]).Trim();
                 }
             }
         }
