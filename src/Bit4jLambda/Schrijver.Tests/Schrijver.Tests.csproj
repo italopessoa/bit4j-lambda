@@ -18,8 +18,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Schrijver\Schrijver.csproj" />
-  </ItemGroup>
-
 </Project>

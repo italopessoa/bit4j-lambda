@@ -18,8 +18,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\TekstVertaler\TekstVertaler.csproj" />
-  </ItemGroup>
-
 </Project>
