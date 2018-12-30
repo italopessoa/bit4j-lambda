@@ -15,6 +15,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bit4j.Lambda.Core", "Bit4j.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Neo4j.Map.Extension", "..\..\..\Neo4j.Map.Extension\src\Neo4j.Map.Extension\Neo4j.Map.Extension.csproj", "{0B322AE0-94F3-42AA-B1FA-6B6C223D2CC7}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lerares", "Lerares\Lerares.csproj", "{8704B1C4-EF49-445E-BDA8-450320BDA12A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lerares.Tests", "Lerares.Tests\Lerares.Tests.csproj", "{AE91DAA2-229F-41AE-8FE7-2B65C9AC64F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +49,14 @@ Global
 		{0B322AE0-94F3-42AA-B1FA-6B6C223D2CC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0B322AE0-94F3-42AA-B1FA-6B6C223D2CC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0B322AE0-94F3-42AA-B1FA-6B6C223D2CC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8704B1C4-EF49-445E-BDA8-450320BDA12A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8704B1C4-EF49-445E-BDA8-450320BDA12A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8704B1C4-EF49-445E-BDA8-450320BDA12A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8704B1C4-EF49-445E-BDA8-450320BDA12A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE91DAA2-229F-41AE-8FE7-2B65C9AC64F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE91DAA2-229F-41AE-8FE7-2B65C9AC64F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE91DAA2-229F-41AE-8FE7-2B65C9AC64F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE91DAA2-229F-41AE-8FE7-2B65C9AC64F8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
