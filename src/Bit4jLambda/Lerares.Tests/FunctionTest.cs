@@ -66,8 +66,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("Query string parameter \"user\" cannot be empty", response.Body);
+            Assert.Equal("Query string parameter \"user\" cannot be empty", responseBody.Error);
         }
 
         [Fact]
@@ -95,8 +97,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("Body cannot be empty", response.Body);
+            Assert.Equal("Body cannot be empty", responseBody.Error);
         }
 
         [Fact]
@@ -133,8 +137,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("Body property \"Answer\" cannot be empty", response.Body);
+            Assert.Equal("Body property \"Answer\" cannot be empty", responseBody.Error);
         }
 
         [Fact]
@@ -171,8 +177,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("Body property \"QuestionUUID\" cannot be empty", response.Body);
+            Assert.Equal("Body property \"QuestionUUID\" cannot be empty", responseBody.Error);
         }
 
         [Fact]
@@ -209,8 +217,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("Body property \"SelectedOption\" cannot be empty", response.Body);
+            Assert.Equal("Body property \"SelectedOption\" cannot be empty", responseBody.Error);
         }
 
         [Fact]
@@ -247,8 +257,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("Body property \"UserUUID\" cannot be empty", response.Body);
+            Assert.Equal("Body property \"UserUUID\" cannot be empty", responseBody.Error);
         }
 
         [Fact]
@@ -286,8 +298,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.NotFound, response.StatusCode);
-            Assert.Equal("User not found!", response.Body);
+            Assert.Equal("User not found!", responseBody.Error);
         }
 
         [Fact]
@@ -325,8 +339,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("User UUID don't match. Check your body request", response.Body);
+            Assert.Equal("User UUID don't match. Check your body request", responseBody.Error);
         }
 
         [Fact]
@@ -365,8 +381,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.NotFound, response.StatusCode);
-            Assert.Equal("Question not found!", response.Body);
+            Assert.Equal("Question not found!", responseBody.Error);
         }
 
         [Fact]
@@ -404,8 +422,10 @@ namespace Lerares.Tests
             response = await function.FunctionHandler(request, context);
 
             Assert.NotNull(response);
+            LeraresResponse responseBody = JsonConvert.DeserializeObject<LeraresResponse>(response.Body);
+            Assert.NotNull(responseBody);
             Assert.Equal((int)HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal("SelectedOption must be in [\"a\",\"b\",\"c\",\"d\"]", response.Body);
+            Assert.Equal("SelectedOption must be in [\"a\",\"b\",\"c\",\"d\"]", responseBody.Error);
         }
 
         [Fact]
